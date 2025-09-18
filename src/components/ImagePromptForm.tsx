@@ -4,6 +4,7 @@ import type { AspectRatio } from '../types';
 interface ImagePromptFormProps {
   onGenerate: (prompt: string, numImages: number, aspectRatio: AspectRatio) => void;
   isLoading: boolean;
+  remainingGenerations: number;
 }
 
 interface FormHandle {
@@ -20,7 +21,7 @@ const GenerateIcon: React.FC = () => (
     </svg>
 );
 
-export const ImagePromptForm = forwardRef<FormHandle, ImagePromptFormProps>(({ onGenerate, isLoading }, ref) => {
+export const ImagePromptForm = forwardRef<FormHandle, ImagePromptFormProps>(({ onGenerate, isLoading, remainingGenerations }, ref) => {
   const [prompt, setPrompt] = useState<string>('');
   const [numImages, setNumImages] = useState<number>(2);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1');
@@ -40,6 +41,9 @@ export const ImagePromptForm = forwardRef<FormHandle, ImagePromptFormProps>(({ o
     }
   };
 
+  const hasReachedLimit = remainingGenerations <= 0;
+  const willExceedLimit = numImages > remainingGenerations;
+
   return (
     <div className="bg-slate-800/50 p-6 rounded-2xl shadow-lg border border-slate-700">
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -54,7 +58,7 @@ export const ImagePromptForm = forwardRef<FormHandle, ImagePromptFormProps>(({ o
             placeholder="e.g., A majestic lion wearing a crown, cinematic lighting, hyperrealistic"
             rows={4}
             className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 placeholder-gray-400"
-            disabled={isLoading}
+            disabled={isLoading || hasReachedLimit}
           />
         </div>
 
@@ -68,7 +72,7 @@ export const ImagePromptForm = forwardRef<FormHandle, ImagePromptFormProps>(({ o
               value={numImages}
               onChange={(e) => setNumImages(Number(e.target.value))}
               className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200"
-              disabled={isLoading}
+              disabled={isLoading || hasReachedLimit}
             >
               {numImageOptions.map(num => <option key={num} value={num}>{num}</option>)}
             </select>
@@ -82,7 +86,7 @@ export const ImagePromptForm = forwardRef<FormHandle, ImagePromptFormProps>(({ o
               value={aspectRatio}
               onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
               className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200"
-              disabled={isLoading}
+              disabled={isLoading || hasReachedLimit}
             >
               {aspectRatios.map(ratio => <option key={ratio} value={ratio}>{ratio}</option>)}
             </select>
@@ -91,11 +95,19 @@ export const ImagePromptForm = forwardRef<FormHandle, ImagePromptFormProps>(({ o
         
         <button
           type="submit"
-          disabled={isLoading || !prompt.trim()}
+          disabled={isLoading || !prompt.trim() || willExceedLimit || hasReachedLimit}
           className="w-full flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-900/50 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105"
         >
           {isLoading ? 'Generating...' : <> <GenerateIcon /> Generate Images </>}
         </button>
+
+        <div className="text-center text-sm text-slate-400 pt-2">
+          {hasReachedLimit ? (
+            <p className="font-bold text-yellow-400">You have reached your daily generation limit.</p>
+          ) : (
+            <p>You have <span className="font-bold text-indigo-400">{remainingGenerations}</span> image generation{remainingGenerations !== 1 ? 's' : ''} left today.</p>
+          )}
+        </div>
       </form>
     </div>
   );

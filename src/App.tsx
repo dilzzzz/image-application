@@ -9,6 +9,7 @@ import { PromptSuggestion } from './components/PromptSuggestion';
 import { ImageHistory } from './components/ImageHistory';
 import { generateImagesFromPrompt, PROMPT_BLOCKED_ERROR_MESSAGE } from './services/geminiService';
 import { useImageHistory } from './hooks/useImageHistory';
+import { useGenerationLimit } from './hooks/useGenerationLimit';
 import type { GeneratedImage, AspectRatio, HistoryItem } from './types';
 
 interface FormHandle {
@@ -20,9 +21,15 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const { history, addHistoryItem, deleteHistoryItem, clearHistory } = useImageHistory();
+  const { remainingGenerations, recordGeneration } = useGenerationLimit();
   const formRef = useRef<FormHandle>(null);
 
   const handleGenerateImages = useCallback(async (prompt: string, numImages: number, aspectRatio: AspectRatio) => {
+    if (numImages > remainingGenerations) {
+      setError(`Your request for ${numImages} image(s) exceeds your remaining daily limit of ${remainingGenerations}. Please request fewer images or try again tomorrow.`);
+      return;
+    }
+    
     setIsLoading(true);
     setError(null);
     setImages([]);
@@ -31,6 +38,7 @@ const App: React.FC = () => {
       const generatedImages = await generateImagesFromPrompt(prompt, numImages, aspectRatio);
       setImages(generatedImages);
       addHistoryItem(prompt, numImages, aspectRatio, generatedImages);
+      recordGeneration(generatedImages.length);
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -41,7 +49,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [addHistoryItem]);
+  }, [addHistoryItem, remainingGenerations, recordGeneration]);
 
   const handleRegenerateFromHistory = useCallback((item: HistoryItem) => {
     if (isLoading) return;
@@ -70,7 +78,12 @@ const App: React.FC = () => {
       <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          <ImagePromptForm ref={formRef} onGenerate={handleGenerateImages} isLoading={isLoading} />
+          <ImagePromptForm 
+            ref={formRef} 
+            onGenerate={handleGenerateImages} 
+            isLoading={isLoading}
+            remainingGenerations={remainingGenerations}
+          />
           
           <div className="mt-12">
             {isLoading && <LoadingSpinner />}
