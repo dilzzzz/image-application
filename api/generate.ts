@@ -44,8 +44,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     const images = response.generatedImages
       .map((img) => {
-        if (img.image?.imageBytes) {
-          const base64ImageBytes: string = img.image.imageBytes;
+        if (img.image && img.image.imageBytes) {
+          const base64ImageBytes = img.image.imageBytes;
           return {
             src: `data:image/jpeg;base64,${base64ImageBytes}`,
             prompt: prompt,
