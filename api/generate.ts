@@ -42,13 +42,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
     
-    const images = response.generatedImages.map((img) => {
-      const base64ImageBytes: string = img.image.imageBytes;
-      return {
-        src: `data:image/jpeg;base64,${base64ImageBytes}`,
-        prompt: prompt,
-      };
-    });
+    const images = response.generatedImages
+      .map((img) => {
+        if (img.image?.imageBytes) {
+          const base64ImageBytes: string = img.image.imageBytes;
+          return {
+            src: `data:image/jpeg;base64,${base64ImageBytes}`,
+            prompt: prompt,
+          };
+        }
+        return null;
+      })
+      .filter((img): img is { src: string; prompt: string } => img !== null);
 
     return res.status(200).json({ images });
 
